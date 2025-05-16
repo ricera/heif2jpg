@@ -8,7 +8,7 @@ if(WIN32)
 	set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib/jpeg-static.lib)
 else()
 	set(JPEG_INCLUDE_DIRS ${JPEG_MODULE_PATH}/include)
-	set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib64/libjpeg.so)
+	set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib64/libjpeg.a)
 endif()
 
 message(STATUS "FindJPEG var JPEG_INCLUDE_DIRS: ${JPEG_INCLUDE_DIRS}")
