@@ -1,12 +1,14 @@
-// SPDX: BSD 2-Clause License
+// SPDX-License-Identifier: BSD-2-Clause
 /**
- * Application for reading in an HEIF file
+ * Application for reading in an HEIF file and converting it to an ultrahdr jpg
  *
+ * Includes code from libheif's example heif_dec.cc:
  *   Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
+ *
+ * Else,
  *   Copyright (c) 2025 Eric Joyner <erj@erj.cc>
  */
 
-// #include <Windows.h>
 #include <cassert>
 #include <cstring>
 #include <string>
@@ -320,23 +322,8 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
     }
     else
     {
-        /* Encode as 8-bit image in C420 */
-        std::cout << "Output in C420 YUV format" << std::endl;
-
-        for (int y = 0; y < yh; y++)
-        {
-            fp.write((char *)(yp + y * y_stride), yw);
-        }
-
-        for (int y = 0; y < ch; y++)
-        {
-            fp.write((char *)(cbp + y * cb_stride), cw);
-        }
-
-        for (int y = 0; y < ch; y++)
-        {
-            fp.write((char *)(crp + y * cr_stride), cw);
-        }
+        std::cerr << "8-bit input not supported yet." << std::endl;
+        return 10;
     }
 
     fp.close();
