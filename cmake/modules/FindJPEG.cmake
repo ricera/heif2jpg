@@ -3,8 +3,13 @@
 
 message(STATUS "FindJPEG -- Looking for JPEG vars: ${JPEG_MODULE_PATH}")
 
-set(JPEG_INCLUDE_DIRS ${JPEG_MODULE_PATH}/include)
-set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib/jpeg-static.lib)
+if(WIN32)
+	set(JPEG_INCLUDE_DIRS ${JPEG_MODULE_PATH}/include)
+	set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib/jpeg-static.lib)
+else()
+	set(JPEG_INCLUDE_DIRS ${JPEG_MODULE_PATH}/include)
+	set(JPEG_LIBRARIES ${JPEG_MODULE_PATH}/lib64/libjpeg.so)
+endif()
 
 message(STATUS "FindJPEG var JPEG_INCLUDE_DIRS: ${JPEG_INCLUDE_DIRS}")
 message(STATUS "FindJPEG var JPEG_LIBRARIES: ${JPEG_LIBRARIES}")

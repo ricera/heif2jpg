@@ -35,6 +35,7 @@
 build/*
 third_party/*
 turbojpeg-install/*
+libde265-install/*
 CMakeFiles/*
 
 # VSCode
