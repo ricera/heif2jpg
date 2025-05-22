@@ -34,3 +34,6 @@
 # CMake artifacts
 build/*
 third_party/*
+
+# VSCode
+.vscode/*
