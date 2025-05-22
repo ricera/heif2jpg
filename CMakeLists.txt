@@ -1,0 +1,63 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(heif2jpg LANGUAGES CXX)
+
+include(ExternalProject)
+
+# Version number
+set (PACKAGE_VERSION 0.0.1)
+
+set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
+
+# At some point...
+if(NOT MSVC)
+    # Add FreeBSD compile flags here
+endif()
+
+# I don't know how necessary these are
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# For clang
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# find_package(JPEG)
+# find_package(HEIF)
+
+# Find JPEG library on system
+#if(NOT JPEG_FOUND)
+#    message(FATAL_ERROR "Could not find JPEG")
+#else()
+#    message(STATUS "Found JPEG: ${JPEG_LIBRARIES} (found version \"${JPEG_VERSION}\")")
+#endif()
+
+# if(NOT HEIF_FOUND)
+    set(LIBHEIF_TARGET_NAME libheif)
+    set(LIBHEIF_PREFIX_DIR ${CMAKE_CURRENT_BINARY_DIR}/${LIBHEIF_TARGET_NAME})
+    set(LIBHEIF_SOURCE_DIR ${THIRD_PARTY_DIR}/${LIBHEIF_TARGET_NAME})
+    set(LIBHEIF_BINARY_DIR ${LIBHEIF_PREFIX_DIR}/src/${LIBHEIF_TARGET_NAME}-build)
+    set(LIBHEIF_INCLUDE_DIRS ${LIBHEIF_SOURCE_DIR}/src ${LIBHEIF_BINARY_DIR})
+    ExternalProject_Add(${LIBHEIF_TARGET_NAME}
+        GIT_REPOSITORY https://github.com/strukturag/libheif.git
+        GIT_TAG d84f58fe0af319f01ec2fd1739873f10400253b5
+        PREFIX ${LIBHEIF_PREFIX_DIR}
+        SOURCE_DIR ${LIBHEIF_SOURCE_DIR}
+        BINARY_DIR ${LIBHEIF_BINARY_DIR}
+        CONFIGURE_COMMAND cmake ${LIBHEIF_SOURCE_DIR} --preset=release-noplugins
+        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
+        BUILD_BYPRODUCTS ${LIBHEIF_LIBRARIES}
+        INSTALL_COMMAND ""
+    )
+# endif()
+
+# Need to figure out what these do
+set(PRIVATE_INCLUDE_DIR ${LIBHEIF_SOURCE_DIR} ${LIBHEIF_INCLUDE_DIRS})
+set(PRIVATE_LINK_LIBS ${LIBHEIF_LIBRARIES})
+
+set(HEIF2JPG_APP heif2jpg)
+add_executable(${HEIF2JPG_APP}
+    "app/main.cc"
+)
+target_include_directories(${HEIF2JPG_APP} PRIVATE ${PRIVATE_INCLUDE_DIR})
+target_link_libraries(${HEIF2JPG_APP} PRIVATE ${PRIVATE_LINK_LIBS})
