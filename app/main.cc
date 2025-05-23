@@ -17,6 +17,8 @@
 #include <libheif/heif.h>
 #include <libheif/heif_image.h>
 
+#include <ultrahdr_api.h>
+
 /* Progress functions obtained from libheif's examples/heif_dec.cc */
 static int max_value_progress = 0;
 
@@ -270,6 +272,9 @@ int main(int argc, char **argv)
     ret = save_p010_file(handle, img, output_filename);
     if (ret)
         return ret;
+
+    uhdr_color_gamut_t hdr_cg;
+    uhdr_create_encoder();
 
     /* Done */
     std::cout << "Success!" << std::endl;
