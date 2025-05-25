@@ -34,6 +34,8 @@
 # CMake artifacts
 build/*
 third_party/*
+turbojpeg-install/*
+CMakeFiles/*
 
 # VSCode
 .vscode/*
