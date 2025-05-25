@@ -80,9 +80,8 @@ std::string derive_output_filename(const std::string &input_filename,
 int save_p010_file(struct heif_image_handle *handle, heif_image *image,
                    std::string output_filename)
 {
-    // todo: convert to C++ style
-    FILE *fp = fopen(output_filename.c_str(), "wb");
-    if (!fp)
+    std::ofstream fp(output_filename, std::ios::out | std::ios::binary);
+    if (!fp.good())
     {
         std::cerr << "Can't open " << output_filename << ": "
                   << strerror(errno) << std::endl;
@@ -113,7 +112,7 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
 
     if (yw < 0 || cw < 0)
     {
-        fclose(fp);
+        fp.close();
         std::cerr << "Invalid Y or C plane width in decoded image." << std::endl;
         return 10;
     }
@@ -121,7 +120,7 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
     /* If 10-bit image output, use P010 format as output */
     if (y_bpp == 10)
     {
-        printf("Output in P010 YUV format\n");
+        std::cout << "Output in P010 YUV format" << std::endl;
 
         const uint16_t *yp_16 = (const uint16_t *)yp;
         const uint16_t *cbp_16 = (const uint16_t *)cbp;
@@ -136,7 +135,7 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
             {
                 uint16_t word = *(yp_16 + z + (y * yw));
                 word = (word << 6); // Little Endian
-                fwrite(&word, 2, 1, fp);
+                fp.write((char *)&word, 2);
             }
         }
 
@@ -149,36 +148,37 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
             {
                 uint16_t word = *(cbp_16 + z + (y * cw));
                 word = (word << 6); // Little Endian
-                fwrite(&word, 2, 1, fp);
+                // fwrite(&word, 2, 1, fp);
+                fp.write((char *)&word, 2);
 
                 word = *(crp_16 + z + (y * cw));
                 word = (word << 6); // Little Endian
-                fwrite(&word, 2, 1, fp);
+                fp.write((char *)&word, 2);
             }
         }
     }
     else
     {
         /* Encode as 8-bit image in C420 */
-        printf("Output in C420 YUV format\n");
+        std::cout << "Output in C420 YUV format" << std::endl;
 
         for (int y = 0; y < yh; y++)
         {
-            fwrite(yp + y * y_stride, 1, yw, fp);
+            fp.write((char *)(yp + y * y_stride), yw);
         }
 
         for (int y = 0; y < ch; y++)
         {
-            fwrite(cbp + y * cb_stride, 1, cw, fp);
+            fp.write((char *)(cbp + y * cb_stride), cw);
         }
 
         for (int y = 0; y < ch; y++)
         {
-            fwrite(crp + y * cr_stride, 1, cw, fp);
+            fp.write((char *)(crp + y * cr_stride), cw);
         }
     }
 
-    fclose(fp);
+    fp.close();
     return 0;
 }
 
