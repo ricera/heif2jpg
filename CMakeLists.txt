@@ -9,11 +9,6 @@ set(PACKAGE_VERSION 0.0.2)
 
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-# At some point...
-if(NOT MSVC)
-    # Add FreeBSD compile flags here
-endif()
-
 # I don't know how necessary these are
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,8 +20,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Speed?
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 
+# For debugging
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+
 # Put install directory in an easy-to-use place
-# message(STATUS "old CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install)
 message(STATUS "new CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 
@@ -39,29 +36,42 @@ set(LIBDE265_SOURCE_DIR ${THIRD_PARTY_DIR}/${LIBDE265_TARGET_NAME})
 set(LIBDE265_BINARY_DIR ${LIBDE265_PREFIX_DIR}/src/${LIBDE265_TARGET_NAME}-build)
 set(LIBDE265_INCLUDE_DIRS ${LIBDE265_SOURCE_DIR} ${LIBDE265_BINARY_DIR})
 
-if(MSVC)
-	set(LIBDE265_LIB_PREFIX ${LIBDE265_BINARY_DIR}/${LIBDE265_TARGET_NAME}/${PROJECT_CONFIG}/)
-else()
-	set(LIBDE265_LIB_PREFIX ${LIBDE265_BINARY_DIR}/${LIBDE265_TARGET_NAME}/)
-endif()
+# Use this if building libde265 as a static library
+# set(LIBDE265_LIB ${CMAKE_STATIC_LIBRARY_PREFIX}libde265${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(LIBDE265_LIB ${CMAKE_STATIC_LIBRARY_PREFIX}de265${CMAKE_STATIC_LIBRARY_SUFFIX})
-set(LIBDE265_LIBRARIES ${LIBDE265_LIB_PREFIX}${LIBDE265_LIB})
-# Install the library in a local path and refer to it later for libultrahdr
+# Install the library in a local path and refer to it later for libheif
 set(LIBDE265_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libde265-install)
+set(LIBDE265_LIB_PREFIX ${LIBDE265_INSTALL_DIR}/lib/)
+set(LIBDE265_LIBRARIES ${LIBDE265_LIB_PREFIX}${LIBDE265_LIB})
 
 message(STATUS "Looking for libde265 .lib/.a at: ${LIBDE265_LIBRARIES}")
 
-ExternalProject_Add(${LIBDE265_TARGET_NAME}
-    GIT_REPOSITORY https://github.com/strukturag/libde265.git
-    GIT_TAG 67831118e3d6961fab4c29fc4364fa0eccfb8473
-    PREFIX ${LIBDE265_PREFIX_DIR}
-    SOURCE_DIR ${LIBDE265_SOURCE_DIR}
-    BINARY_DIR ${LIBDE265_BINARY_DIR}
-    CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF -DENABLE_SDL=OFF
-    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config ${PROJECT_CONFIG}
-    BUILD_BYPRODUCTS ${LIBDE265_LIBRARIES}
-    INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix ${LIBDE265_INSTALL_DIR}
-)
+# Build shared libs when using MSVC
+if (MSVC)
+    ExternalProject_Add(${LIBDE265_TARGET_NAME}
+        GIT_REPOSITORY https://github.com/strukturag/libde265.git
+        GIT_TAG 67831118e3d6961fab4c29fc4364fa0eccfb8473
+        PREFIX ${LIBDE265_PREFIX_DIR}
+        SOURCE_DIR ${LIBDE265_SOURCE_DIR}
+        BINARY_DIR ${LIBDE265_BINARY_DIR}
+        CMAKE_ARGS -DBUILD_SHARED_LIBS=ON -DENABLE_SDL=OFF
+        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config ${PROJECT_CONFIG}
+        BUILD_BYPRODUCTS ${LIBDE265_LIBRARIES}
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix ${LIBDE265_INSTALL_DIR}
+    )
+else()
+    ExternalProject_Add(${LIBDE265_TARGET_NAME}
+        GIT_REPOSITORY https://github.com/strukturag/libde265.git
+        GIT_TAG 67831118e3d6961fab4c29fc4364fa0eccfb8473
+        PREFIX ${LIBDE265_PREFIX_DIR}
+        SOURCE_DIR ${LIBDE265_SOURCE_DIR}
+        BINARY_DIR ${LIBDE265_BINARY_DIR}
+        CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF -DENABLE_SDL=OFF
+        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config ${PROJECT_CONFIG}
+        BUILD_BYPRODUCTS ${LIBDE265_LIBRARIES}
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix ${LIBDE265_INSTALL_DIR}
+    )
+endif()
 
 # Setup libjpeg-turbo
 set(JPEGTURBO_TARGET_NAME turbojpeg)
@@ -77,9 +87,8 @@ endif()
 
 # Install the library in a local path and refer to it later for libultrahdr
 set(JPEG_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/turbojpeg-install)
-# Then set lib dirs
 if (MSVC)
-	set(JPEG_LIB_PREFIX ${JPEG_INSTALL_DIR}/${PROJECT_CONFIG}/)
+	set(JPEG_LIB_PREFIX ${JPEG_INSTALL_DIR}/lib/)
 else()
 	set(JPEG_LIB_PREFIX ${JPEG_INSTALL_DIR}/lib64/)
 endif()
@@ -94,7 +103,7 @@ ExternalProject_Add(${JPEGTURBO_TARGET_NAME}
     SOURCE_DIR ${JPEGTURBO_SOURCE_DIR}
     BINARY_DIR ${JPEGTURBO_BINARY_DIR}
     BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config ${PROJECT_CONFIG}
-    CMAKE_ARGS -DENABLE_SHARED=1
+    CMAKE_ARGS -DENABLE_SHARED=0
     BUILD_BYPRODUCTS ${JPEG_LIBRARIES}
     INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --prefix ${JPEG_INSTALL_DIR}
 )
@@ -116,6 +125,9 @@ set(LIBHEIF_LIBRARIES ${HEIF_LIB_PREFIX}${HEIF_LIB_STATIC})
 
 message(STATUS "Looking for libheif libs: ${LIBHEIF_LIBRARIES}")
 
+# Build libheif with BUILD_SHARED_LIBS=ON for Windows
+# Don't include JPEG library for non-Windows builds until I can figure out how
+# to fix them.
 if (MSVC)
 	ExternalProject_Add(${LIBHEIF_TARGET_NAME}
 	    DEPENDS ${LIBDE265_TARGET_NAME} ${JPEGTURBO_TARGET_NAME}
@@ -124,7 +136,7 @@ if (MSVC)
 	    PREFIX ${LIBHEIF_PREFIX_DIR}
 	    SOURCE_DIR ${LIBHEIF_SOURCE_DIR}
 	    BINARY_DIR ${LIBHEIF_BINARY_DIR}
-	    CMAKE_ARGS --preset=release-noplugins -DWITH_EXAMPLES=OFF
+	    CMAKE_ARGS --preset=release-noplugins -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON
 	    CMAKE_CACHE_ARGS
 		"-DLIBDE265_LIBRARY:FILEPATH=${LIBDE265_INSTALL_DIR}/lib/${LIBDE265_LIB}"
 		"-DLIBDE265_INCLUDE_DIR:FILEPATH=${LIBDE265_INSTALL_DIR}/include"
@@ -173,6 +185,7 @@ set(LIBUHDR_LIBRARIES ${UHDR_LIB_PREFIX}${UHDR_LIB_STATIC})
 message(STATUS "Looking for libultrahdr libs: ${LIBUHDR_LIBRARIES}")
 
 # JPEG_MODULE_PATH is to hijack this project's find(JPEG QUIET) call
+# This project builds both static and dynamic libraries simultaneously
 ExternalProject_Add(${LIBUHDR_TARGET_NAME}
     DEPENDS ${JPEGTURBO_TARGET_NAME}
     GIT_REPOSITORY https://github.com/ricera/libultrahdr.git
@@ -193,10 +206,7 @@ ExternalProject_Add_Step(${LIBUHDR_TARGET_NAME} copy_findjpeg
     DEPENDERS configure
 )
 
-# Need to figure out what these do
 set(PRIVATE_INCLUDE_DIR ${LIBHEIF_SOURCE_DIR} ${LIBHEIF_INCLUDE_DIRS} ${LIBUHDR_SOURCE_DIR} ${LIBUHDR_INCLUDE_DIRS})
-# set(PRIVATE_LINK_LIBS ${LIBHEIF_LIBRARIES} ${LIBUHDR_LIBRARIES})
-# does JPEG need to be public?
 set(PRIVATE_LINK_LIBS ${LIBHEIF_LIBRARIES} ${LIBUHDR_LIBRARIES} ${JPEG_LIBRARIES} ${LIBDE265_LIBRARIES})
 
 set(HEIF2JPG_APP heif2jpg)
@@ -207,17 +217,20 @@ add_dependencies(${HEIF2JPG_APP} ${LIBUHDR_TARGET_NAME} ${LIBHEIF_TARGET_NAME})
 target_include_directories(${HEIF2JPG_APP} PRIVATE ${PRIVATE_INCLUDE_DIR})
 target_link_libraries(${HEIF2JPG_APP} PRIVATE ${PRIVATE_LINK_LIBS})
 
+find_package(Threads REQUIRED)
+target_link_libraries(${HEIF2JPG_APP} PRIVATE Threads::Threads)
+
 if (MSVC)
-else()
-	find_package(Threads REQUIRED)
-	target_link_libraries(${HEIF2JPG_APP} PRIVATE Threads::Threads)
+    target_link_options(${HEIF2JPG_APP} PRIVATE /NODEFAULTLIB:LIBCMT)
+    # This will cause all sorts of linking issues
+    # target_compile_options(${HEIF2JPG_APP} PRIVATE /MT)
 endif()
 
 # Install app and necessary .dlls
 install(TARGETS ${HEIF2JPG_APP})
 if (MSVC)
 	install(FILES ${HEIF_LIB_PREFIX}/heif.dll TYPE BIN)
-	install(FILES ${LIBDE265_LIB_PREFIX}/libde265.dll TYPE BIN)
-	install(FILES ${UHDR_LIB_PREFIX}/uhdr.dll TYPE BIN)
-	install(FILES ${JPEG_LIB_PREFIX}/jpeg62.dll TYPE BIN)
+	install(FILES ${LIBDE265_INSTALL_DIR}/bin/libde265.dll TYPE BIN)
+	#install(FILES ${UHDR_LIB_PREFIX}/uhdr.dll TYPE BIN)
+	#install(FILES ${JPEG_LIB_PREFIX}/jpeg62.dll TYPE BIN)
 endif()
