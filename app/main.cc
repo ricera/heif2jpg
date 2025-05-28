@@ -16,6 +16,8 @@
 #include <fstream>
 #include <vector>
 
+#include <argparse/argparse.hpp>
+
 #include <libheif/heif.h>
 #include <libheif/heif_image.h>
 
@@ -337,17 +339,25 @@ int main(int argc, char **argv)
     struct heif_error err;
     int ret;
 
-    if (argc < 2)
-    {
-        std::cerr << "A filename is required." << std::endl;
+    /* Use imported argparser library to handle input arguments */
+    argparse::ArgumentParser argparser("heif2jpg");
+    argparser.add_argument("input_file")
+        .help("File path to HEIF file to convert");
+
+    try {
+        argparser.parse_args(argc, argv);
+    }
+    catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << argparser;
         return 1;
     }
 
-    std::string input_filename(argv[1]);
+    std::string input_filename = argparser.get<std::string>("input_file");
     // std::string output_filename = derive_output_filename(input_filename, "p010");
     std::string output_filename = derive_output_filename(input_filename, "uhdr.jpg");
 
-    std::cout << "Output file: " << output_filename << std::endl;
+    std::cout << "Output file path: " << output_filename << std::endl;
 
     /* Check for valid file */
     // Can it be opened?
@@ -364,7 +374,7 @@ int main(int argc, char **argv)
     heif_context *ctx = heif_context_alloc();
     if (!ctx)
     {
-        std::cerr << "HEIF context allocation failed." << std::endl;
+        std::cerr << "libheif: HEIF context allocation failed." << std::endl;
         return 3;
     }
 
@@ -373,7 +383,8 @@ int main(int argc, char **argv)
     err = heif_context_read_from_file(ctx, input_filename.c_str(), nullptr);
     if (err.code != 0)
     {
-        std::cerr << "Could not read HEIF/AVIF file: " << err.message << std::endl;
+        std::cerr << "libheif: Could not read HEIF/AVIF file: " <<
+            err.message << std::endl;
         return 4;
     }
 
