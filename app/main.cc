@@ -67,6 +67,10 @@ private:
     struct heif_context *ctx_;
 };
 
+struct heif2jpg_encode_options {
+    uhdr_color_gamut_t color_gamut;
+};
+
 std::string derive_output_filename(const std::string &input_filename,
                                    const std::string &suffix)
 {
@@ -81,8 +85,10 @@ std::string derive_output_filename(const std::string &input_filename,
     return std::string(input_stem + "." + suffix);
 }
 
-int save_uhdr_jpg_file(struct heif_image_handle *handle, heif_image *image,
-                   std::string output_filename)
+int save_uhdr_jpg_file(struct heif_image_handle *handle,
+    heif_image *image,
+    struct heif2jpg_encode_options encode_options,
+    std::string output_filename)
 {
     uhdr_error_info_t status;
     int ret;
@@ -129,7 +135,7 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle, heif_image *image,
 
     raw_uhdr_image.fmt = UHDR_IMG_FMT_24bppYCbCrP010;
     raw_uhdr_image.range = UHDR_CR_FULL_RANGE;
-    raw_uhdr_image.cg = UHDR_CG_BT_2100;
+    raw_uhdr_image.cg = encode_options.color_gamut;
     raw_uhdr_image.ct = UHDR_CT_HLG;
     raw_uhdr_image.w = yw;
     raw_uhdr_image.h = yh;
@@ -343,6 +349,17 @@ int main(int argc, char **argv)
     argparse::ArgumentParser argparser("heif2jpg");
     argparser.add_argument("input_file")
         .help("File path to HEIF file to convert");
+    argparser.add_argument("output_file")
+        .default_value(std::string("-"))
+        .help("File path to JPG file to write to");
+    argparser.add_argument("-p")
+        .default_value(false)
+        .help("Output a p010 encoded raw image instead of a jpeg")
+        .flag();
+    argparser.add_argument("-c")
+        .default_value(2)
+        .help("Input color gamut: 0 = BT709, 1 = Display P3, 2 = BT2100")
+        .scan<'i', int>();
 
     try {
         argparser.parse_args(argc, argv);
@@ -354,9 +371,15 @@ int main(int argc, char **argv)
     }
 
     std::string input_filename = argparser.get<std::string>("input_file");
-    // std::string output_filename = derive_output_filename(input_filename, "p010");
-    std::string output_filename = derive_output_filename(input_filename, "uhdr.jpg");
+    std::string output_filename = argparser.get<std::string>("output_file");
 
+    bool output_p010 = argparser.get<bool>("-p");
+    if (output_filename.starts_with("-")) {
+        if (output_p010)
+            output_filename = derive_output_filename(input_filename, "p010");
+        else
+            output_filename = derive_output_filename(input_filename, "uhdr.jpg");
+    }
     std::cout << "Output file path: " << output_filename << std::endl;
 
     /* Check for valid file */
@@ -391,12 +414,12 @@ int main(int argc, char **argv)
     int num_images = heif_context_get_number_of_top_level_images(ctx);
     if (num_images == 0)
     {
-        std::cerr << "File doesn't contain any images!" << std::endl;
+        std::cerr << "libheif: File doesn't contain any images!" << std::endl;
         return 5;
     }
     else if (num_images != 1)
     {
-        std::cerr << "No support for more than 1 image." << std::endl;
+        std::cerr << "libheif: No support for more than 1 image." << std::endl;
         return 6;
     }
 
@@ -404,7 +427,7 @@ int main(int argc, char **argv)
     err = heif_context_get_primary_image_handle(ctx, &handle);
     if (err.code)
     {
-        std::cerr << "Could not read HEIF image: " << err.message << std::endl;
+        std::cerr << "libheif: Could not read HEIF image: " << err.message << std::endl;
         return 7;
     }
 
@@ -424,20 +447,23 @@ int main(int argc, char **argv)
     err = heif_decode_image(handle, &img, heif_colorspace_YCbCr, heif_chroma_420, decode_options.get());
     if (err.code)
     {
-        std::cerr << "Could not decode HEIF image: " << err.message << std::endl;
+        std::cerr << "llibheif: Could not decode HEIF image: " << err.message << std::endl;
         return 8;
     }
 
-    ret = save_uhdr_jpg_file(handle, img, output_filename);
-    if (ret)
-        return ret;
+    /* Determine output file format */
+    if (output_p010) {
+        ret = save_p010_file(handle, img, output_filename);
+        if (ret)
+            return ret;
+    } else {
+        struct heif2jpg_encode_options encode_options;
+        encode_options.color_gamut = (uhdr_color_gamut_t)argparser.get<int>("-c");
 
-#if 0
-    /* Write out raw P010 file */
-    ret = save_p010_file(handle, img, output_filename);
-    if (ret)
-        return ret;
-#endif
+        ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
+        if (ret)
+            return ret;
+    }
 
     /* Done */
     std::cout << "Success!" << std::endl;
