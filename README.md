@@ -1,4 +1,4 @@
-Build
+Build and Install
 ===
 
 - Uses cmake
@@ -26,3 +26,11 @@ build adds a couple .dlls.
 
 Installs to `<repo-dir>/install/bin`, but you can overwrite
 `CMAKE_INSTALL_PREFIX` in the top-level CMakeLists.txt to change this.
+
+Future
+===
+- Handle metadata; right now none of it is transferred. Use ExifTool for this.
+- Handle more heif formats; e.g. 4:2:2 images or images from my phone
+- As part of the above, grab encoding parameters for the jpeg from the metadata
+contained in the heif file; these include things like the subsampling level (e.g. 4:2:0), colorspace (e.g. BT 2100) and transfer function (e.g. HLG)
+- Perform anamorphic desqueeze
