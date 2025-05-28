@@ -69,6 +69,7 @@ private:
 
 struct heif2jpg_encode_options {
     uhdr_color_gamut_t color_gamut;
+    uhdr_color_range_t color_range;
 };
 
 std::string derive_output_filename(const std::string &input_filename,
@@ -134,7 +135,7 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
     uhdr_raw_image_t raw_uhdr_image{};
 
     raw_uhdr_image.fmt = UHDR_IMG_FMT_24bppYCbCrP010;
-    raw_uhdr_image.range = UHDR_CR_FULL_RANGE;
+    raw_uhdr_image.range = encode_options.color_range;
     raw_uhdr_image.cg = encode_options.color_gamut;
     raw_uhdr_image.ct = UHDR_CT_HLG;
     raw_uhdr_image.w = yw;
@@ -227,9 +228,11 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         output_image.data = malloc(encoded_output->data_sz);
         memcpy(output_image.data, encoded_output->data, encoded_output->data_sz);
         output_image.capacity = output_image.data_sz = encoded_output->data_sz;
+#if 0
         output_image.cg = encoded_output->cg;
         output_image.ct = encoded_output->ct;
         output_image.range = encoded_output->range;
+#endif
 
         uhdr_release_encoder(handle);
 
@@ -360,6 +363,10 @@ int main(int argc, char **argv)
         .default_value(2)
         .help("Input color gamut: 0 = BT709, 1 = Display P3, 2 = BT2100")
         .scan<'i', int>();
+    argparser.add_argument("-r")
+        .default_value(1)
+        .help("Input color range: 0 = limited, 1 = full")
+        .scan<'i', int>();
 
     try {
         argparser.parse_args(argc, argv);
@@ -436,6 +443,7 @@ int main(int argc, char **argv)
         decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
     decode_options->strict_decoding = false;
     decode_options->decoder_id = nullptr;
+    decode_options->convert_hdr_to_8bit = false;
 
     decode_options->start_progress = start_progress;
     decode_options->on_progress = on_progress;
@@ -459,6 +467,7 @@ int main(int argc, char **argv)
     } else {
         struct heif2jpg_encode_options encode_options;
         encode_options.color_gamut = (uhdr_color_gamut_t)argparser.get<int>("-c");
+        encode_options.color_range = (uhdr_color_range_t)argparser.get<int>("-r");
 
         ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
         if (ret)
