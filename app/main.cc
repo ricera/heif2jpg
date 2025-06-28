@@ -2,10 +2,6 @@
 /**
  * Application for reading in an HEIF file and converting it to an ultrahdr jpg
  *
- * Includes code from libheif's example heif_dec.cc:
- *   Copyright (c) 2023 Dirk Farin <dirk.farin@gmail.com>
- *
- * Else,
  *   Copyright (c) 2025 Eric Joyner <erj@erj.cc>
  */
 
@@ -70,6 +66,7 @@ private:
 struct heif2jpg_encode_options {
     uhdr_color_gamut_t color_gamut;
     uhdr_color_range_t color_range;
+    uhdr_color_transfer_t color_transfer;
 };
 
 std::string derive_output_filename(const std::string &input_filename,
@@ -137,7 +134,7 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
     raw_uhdr_image.fmt = UHDR_IMG_FMT_24bppYCbCrP010;
     raw_uhdr_image.range = encode_options.color_range;
     raw_uhdr_image.cg = encode_options.color_gamut;
-    raw_uhdr_image.ct = UHDR_CT_HLG;
+    raw_uhdr_image.ct = encode_options.color_transfer;
     raw_uhdr_image.w = yw;
     raw_uhdr_image.h = yh;
 
@@ -367,6 +364,10 @@ int main(int argc, char **argv)
         .default_value(1)
         .help("Input color range: 0 = limited, 1 = full")
         .scan<'i', int>();
+    argparser.add_argument("-t")
+        .default_value(1)
+        .help("Input color transfer function: 0 = Linear, 1 = HLG, 2 = PQ, 3 = SRGB")
+        .scan<'i', int>();
 
     try {
         argparser.parse_args(argc, argv);
@@ -468,6 +469,8 @@ int main(int argc, char **argv)
         struct heif2jpg_encode_options encode_options;
         encode_options.color_gamut = (uhdr_color_gamut_t)argparser.get<int>("-c");
         encode_options.color_range = (uhdr_color_range_t)argparser.get<int>("-r");
+        encode_options.color_transfer =
+            (uhdr_color_transfer_t)argparser.get<int>("-t");
 
         ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
         if (ret)
