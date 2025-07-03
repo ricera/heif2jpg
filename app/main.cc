@@ -99,10 +99,7 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         return 9;
     }
     
-    /* Get HEIF image parameters, arrays, pointers */
-    int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
-    std::cout << "Input luma bit depth: " << bit_depth << std::endl;
-    
+    /* Get HEIF image parameters, arrays, pointers */  
     int y_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_Y);
     int cb_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
     int cr_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_Cr);
@@ -172,7 +169,6 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         /* The U and V planes are interleaved in P010;
          * U == Cb, and V == Cr
          */
-
         word_pos = 0;
         for (int y = 0; y < ch; y++)
         {
@@ -210,6 +206,8 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         uhdr_enc_set_gainmap_gamma(handle, 1.0f);
         uhdr_enc_set_preset(handle, UHDR_USAGE_BEST_QUALITY);
 
+        std::cout << "Encoding as ultra HDR jpeg..." << std::endl;
+
         status = uhdr_encode(handle);
         if (status.error_code != UHDR_CODEC_OK) {
             if (status.has_detail) {
@@ -225,11 +223,6 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         output_image.data = malloc(encoded_output->data_sz);
         memcpy(output_image.data, encoded_output->data, encoded_output->data_sz);
         output_image.capacity = output_image.data_sz = encoded_output->data_sz;
-#if 0
-        output_image.cg = encoded_output->cg;
-        output_image.ct = encoded_output->ct;
-        output_image.range = encoded_output->range;
-#endif
 
         uhdr_release_encoder(handle);
 
@@ -263,8 +256,6 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
     int cb_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_Cb);
     int cr_bpp = heif_image_get_bits_per_pixel_range(image, heif_channel_Cr);
 
-    int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
-    std::cout << "Input luma bit depth: " << bit_depth << std::endl;
     printf("Encoding image with Y=%d, Cb=%d, Cr=%d bits per pixel\n", y_bpp, cb_bpp, cr_bpp);
 
     size_t y_stride, cb_stride, cr_stride;
@@ -342,6 +333,7 @@ int main(int argc, char **argv)
 {
     /* Automatically inits and deinits the library in main() scope */
     LibHeifInitializer initializer;
+
     struct heif_error err;
     int ret;
 
@@ -439,10 +431,64 @@ int main(int argc, char **argv)
         return 7;
     }
 
+    int width = heif_image_handle_get_width(handle);
+    int height = heif_image_handle_get_height(handle);
+    int primary = heif_image_handle_is_primary_image(handle);
+    printf("Image info: %dx%d%s\n", width, height, primary ? ", primary" : ", not primary");
+
+    heif_colorspace colorspace;
+    heif_chroma chroma;
+    err = heif_image_handle_get_preferred_decoding_colorspace(handle, &colorspace, &chroma);
+    if (err.code) {
+      std::cerr << err.message << std::endl;
+      return 10;
+    }
+
+    printf("Image colorspace: ");
+    switch (colorspace) {
+      case heif_colorspace_YCbCr:
+        printf("YCbCr, ");
+        break;
+      case heif_colorspace_RGB:
+        printf("RGB");
+        break;
+      case heif_colorspace_monochrome:
+        printf("monochrome");
+        break;
+      case heif_colorspace_nonvisual:
+        printf("non-visual");
+        break;
+      default:
+        printf("unknown");
+        break;
+    }
+
+    if (colorspace == heif_colorspace_YCbCr) {
+      switch (chroma) {
+        case heif_chroma_420:
+          printf("4:2:0");
+          break;
+        case heif_chroma_422:
+          printf("4:2:2");
+          break;
+        case heif_chroma_444:
+          printf("4:4:4");
+          break;
+        default:
+          printf("unknown");
+          break;
+      }
+    }
+
+    printf("\n");
+    
+    int bit_depth = heif_image_handle_get_luma_bits_per_pixel(handle);
+    std::cout << "Input luma bit depth: " << bit_depth << std::endl;
+
     // This is a spectacularly odd construction -- from libheif's heif_dec.cc
     std::unique_ptr<heif_decoding_options, void (*)(heif_decoding_options *)>
         decode_options(heif_decoding_options_alloc(), heif_decoding_options_free);
-    decode_options->strict_decoding = false;
+    decode_options->strict_decoding = true;
     decode_options->decoder_id = nullptr;
     decode_options->convert_hdr_to_8bit = false;
 
@@ -456,7 +502,7 @@ int main(int argc, char **argv)
     err = heif_decode_image(handle, &img, heif_colorspace_YCbCr, heif_chroma_420, decode_options.get());
     if (err.code)
     {
-        std::cerr << "llibheif: Could not decode HEIF image: " << err.message << std::endl;
+        std::cerr << "libheif: Could not decode HEIF image: " << err.message << std::endl;
         return 8;
     }
 
