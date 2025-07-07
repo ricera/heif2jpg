@@ -6,6 +6,7 @@
  */
 
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <iostream>
@@ -67,6 +68,7 @@ struct heif2jpg_encode_options {
     uhdr_color_gamut_t color_gamut;
     uhdr_color_range_t color_range;
     uhdr_color_transfer_t color_transfer;
+    uint16_t new_width;
 };
 
 std::string derive_output_filename(const std::string &input_filename,
@@ -199,6 +201,13 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
             return 11;
         }
 
+        if (encode_options.new_width > 0) {
+            float scale_factor = (float)encode_options.new_width / yw;
+            uint16_t new_height = (uint16_t)std::round(yh * scale_factor);
+
+            uhdr_add_effect_resize(handle, encode_options.new_width, new_height);
+        }
+ 
         uhdr_enc_set_quality(handle, 95, UHDR_BASE_IMG);
         uhdr_enc_set_quality(handle, 95, UHDR_GAIN_MAP_IMG);
         uhdr_enc_set_using_multi_channel_gainmap(handle, false);
@@ -310,7 +319,6 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
             {
                 uint16_t word = *(cbp_16 + z + (y * cw));
                 word = (word << 6); // Little Endian
-                // fwrite(&word, 2, 1, fp);
                 fp.write((char *)&word, 2);
 
                 word = *(crp_16 + z + (y * cw));
@@ -360,6 +368,10 @@ int main(int argc, char **argv)
         .default_value(1)
         .help("Input color transfer function: 0 = Linear, 1 = HLG, 2 = PQ, 3 = SRGB")
         .scan<'i', int>();
+    argparser.add_argument("-w")
+        .default_value(0)
+        .help("(JPEG-only) Output image width, in pixels")
+        .scan<'i', uint16_t>();
 
     try {
         argparser.parse_args(argc, argv);
@@ -517,6 +529,7 @@ int main(int argc, char **argv)
         encode_options.color_range = (uhdr_color_range_t)argparser.get<int>("-r");
         encode_options.color_transfer =
             (uhdr_color_transfer_t)argparser.get<int>("-t");
+        encode_options.new_width = argparser.get<uint16_t>("-w");
 
         ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
         if (ret)
