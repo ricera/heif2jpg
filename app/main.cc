@@ -69,6 +69,7 @@ struct heif2jpg_encode_options {
     uhdr_color_range_t color_range;
     uhdr_color_transfer_t color_transfer;
     uint16_t new_width;
+    uint8_t quality;
 };
 
 std::string derive_output_filename(const std::string &input_filename,
@@ -208,8 +209,8 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
             uhdr_add_effect_resize(handle, encode_options.new_width, new_height);
         }
  
-        uhdr_enc_set_quality(handle, 95, UHDR_BASE_IMG);
-        uhdr_enc_set_quality(handle, 95, UHDR_GAIN_MAP_IMG);
+        uhdr_enc_set_quality(handle, encode_options.quality, UHDR_BASE_IMG);
+        uhdr_enc_set_quality(handle, encode_options.quality, UHDR_GAIN_MAP_IMG);
         uhdr_enc_set_using_multi_channel_gainmap(handle, false);
         uhdr_enc_set_gainmap_scale_factor(handle, 1);
         uhdr_enc_set_gainmap_gamma(handle, 1.0f);
@@ -351,27 +352,31 @@ int main(int argc, char **argv)
         .help("File path to HEIF file to convert");
     argparser.add_argument("output_file")
         .default_value(std::string("-"))
-        .help("File path to JPG file to write to");
+        .help("File path to file to write to");
     argparser.add_argument("-p")
         .default_value(false)
-        .help("Output a p010 encoded raw image instead of a jpeg")
+        .help("Output a p010 encoded raw image instead of a jpeg (All encoding flags are ignored)")
         .flag();
     argparser.add_argument("-c")
         .default_value(2)
-        .help("Input color gamut: 0 = BT709, 1 = Display P3, 2 = BT2100")
+        .help("(JPEG) Input color gamut: 0 = BT709, 1 = Display P3, 2 = BT2100")
         .scan<'i', int>();
     argparser.add_argument("-r")
         .default_value(1)
-        .help("Input color range: 0 = limited, 1 = full")
+        .help("(JPEG) Input color range: 0 = limited, 1 = full")
         .scan<'i', int>();
     argparser.add_argument("-t")
         .default_value(1)
-        .help("Input color transfer function: 0 = Linear, 1 = HLG, 2 = PQ, 3 = SRGB")
+        .help("(JPEG) Input color transfer function: 0 = Linear, 1 = HLG, 2 = PQ, 3 = SRGB")
         .scan<'i', int>();
     argparser.add_argument("-w")
         .default_value(0)
-        .help("(JPEG-only) Output image width, in pixels")
+        .help("(JPEG) Output image width, in pixels")
         .scan<'i', uint16_t>();
+    argparser.add_argument("-q")
+        .default_value(95)
+        .help("(JPEG) Output base image and gainmap image quality, 0-100")
+        .scan<'i', uint8_t>();
 
     try {
         argparser.parse_args(argc, argv);
@@ -530,6 +535,13 @@ int main(int argc, char **argv)
         encode_options.color_transfer =
             (uhdr_color_transfer_t)argparser.get<int>("-t");
         encode_options.new_width = argparser.get<uint16_t>("-w");
+        encode_options.quality = argparser.get<uint8_t>("-q");
+
+        if (encode_options.quality > 100) {
+            std::cerr << "Bad quality value (" << encode_options.quality <<
+                "); must be between 1 and 100" << std::endl;
+            return 9;
+        }
 
         ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
         if (ret)
