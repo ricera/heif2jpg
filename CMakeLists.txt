@@ -201,8 +201,8 @@ message(STATUS "Looking for libultrahdr libs: ${LIBUHDR_LIBRARIES}")
 # This project builds both static and dynamic libraries simultaneously
 ExternalProject_Add(${LIBUHDR_TARGET_NAME}
     DEPENDS ${JPEGTURBO_TARGET_NAME}
-    GIT_REPOSITORY https://github.com/ricera/libultrahdr.git
-    GIT_TAG 38f19cb90b19f46911d3ba5a2c2cbe496c99603b
+    GIT_REPOSITORY https://github.com/google/libultrahdr.git
+    GIT_TAG 5fa99b5271a3c80a13c78062d7adc6310222dd8e
     PREFIX ${LIBUHDR_PREFIX_DIR}
     SOURCE_DIR ${LIBUHDR_SOURCE_DIR}
     BINARY_DIR ${LIBUHDR_BINARY_DIR}
