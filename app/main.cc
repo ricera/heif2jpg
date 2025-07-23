@@ -161,7 +161,7 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         {
             for (int z = 0; z < yw; z++)
             {
-                uint16_t word = *(yp_16 + z + (y * yw));
+                uint16_t word = *(yp_16 + z + (y * (y_stride / 2)));
                 word = (word << 6); // Little Endian
                 
                 ((uint16_t *)(raw_uhdr_image.planes[UHDR_PLANE_Y]))[word_pos] = word;
@@ -177,13 +177,13 @@ int save_uhdr_jpg_file(struct heif_image_handle *handle,
         {
             for (int z = 0; z < cw; z++)
             {
-                uint16_t word = *(cbp_16 + z + (y * cw));
+                uint16_t word = *(cbp_16 + z + (y * (cb_stride / 2)));
                 word = (word << 6); // Little Endian
 
                 ((uint16_t *)(raw_uhdr_image.planes[UHDR_PLANE_UV]))[word_pos] = word;
                 word_pos++;
 
-                word = *(crp_16 + z + (y * cw));
+                word = *(crp_16 + z + (y * (cr_stride / 2)));
                 word = (word << 6); // Little Endian
 
                 ((uint16_t *)(raw_uhdr_image.planes[UHDR_PLANE_UV]))[word_pos] = word;
@@ -305,7 +305,7 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
         {
             for (int z = 0; z < yw; z++)
             {
-                uint16_t word = *(yp_16 + z + (y * yw));
+                uint16_t word = *(yp_16 + z + (y * (y_stride / 2)));
                 word = (word << 6); // Little Endian
                 fp.write((char *)&word, 2);
             }
@@ -318,11 +318,11 @@ int save_p010_file(struct heif_image_handle *handle, heif_image *image,
         {
             for (int z = 0; z < cw; z++)
             {
-                uint16_t word = *(cbp_16 + z + (y * cw));
+                uint16_t word = *(cbp_16 + z + (y * (cb_stride / 2)));
                 word = (word << 6); // Little Endian
                 fp.write((char *)&word, 2);
 
-                word = *(crp_16 + z + (y * cw));
+                word = *(crp_16 + z + (y * (cr_stride / 2)));
                 word = (word << 6); // Little Endian
                 fp.write((char *)&word, 2);
             }
