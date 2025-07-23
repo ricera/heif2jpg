@@ -370,11 +370,11 @@ int main(int argc, char **argv)
         .help("(JPEG) Input color transfer function: 0 = Linear, 1 = HLG, 2 = PQ, 3 = SRGB")
         .scan<'i', int>();
     argparser.add_argument("-w")
-        .default_value(0)
+        .default_value((uint16_t)0)
         .help("(JPEG) Output image width, in pixels")
         .scan<'i', uint16_t>();
     argparser.add_argument("-q")
-        .default_value(95)
+        .default_value((uint8_t)95)
         .help("(JPEG) Output base image and gainmap image quality, 0-100")
         .scan<'i', uint8_t>();
 
