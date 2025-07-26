@@ -7,6 +7,7 @@ project(heif2jpg
 )
 
 include(ExternalProject)
+include(CTest)
 
 # Version number
 set(PACKAGE_VERSION 0.0.2)
@@ -220,6 +221,38 @@ ExternalProject_Add_Step(${LIBUHDR_TARGET_NAME} copy_findjpeg
     DEPENDERS configure
 )
 
+# Add CPPUTest info
+set(CPPUTEST_TARGET_NAME cpputest)
+set(CPPUTEST_PREFIX_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CPPUTEST_TARGET_NAME})
+set(CPPUTEST_SOURCE_DIR ${THIRD_PARTY_DIR}/${CPPUTEST_TARGET_NAME})
+set(CPPUTEST_BINARY_DIR ${CPPUTEST_PREFIX_DIR}/src/${CPPUTEST_TARGET_NAME}-build)
+set(CPPUTEST_INSTALL_DIR ${CPPUTEST_PREFIX_DIR}/src/${CPPUTEST_TARGET_NAME}-install)
+
+set(CPPUTEST_INCLUDE_DIRS ${CPPUTEST_INSTALL_DIR}/include)
+
+set(CPPUTEST_LIB_STATIC ${CMAKE_STATIC_LIBRARY_PREFIX}CppUTest${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(CPPUTESTEXT_LIB_STATIC ${CMAKE_STATIC_LIBRARY_PREFIX}CppUTestExt${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(CPPUTEST_LIB_PREFIX ${CPPUTEST_INSTALL_DIR}/lib/)
+set(CPPUTEST_LIBRARIES
+    ${CPPUTEST_LIB_PREFIX}${CPPUTEST_LIB_STATIC}
+    ${CPPUTEST_LIB_PREFIX}${CPPUTESTEXT_LIB_STATIC}
+)
+
+message(STATUS "Looking for CPPUTest libs at: ${CPPUTEST_LIBRARIES}")
+message(STATUS "Looking for CPPUTest includes in: ${CPPUTEST_INCLUDE_DIRS}")
+
+ExternalProject_Add(${CPPUTEST_TARGET_NAME}
+    GIT_REPOSITORY https://github.com/cpputest/cpputest.git
+    GIT_TAG d553d406caba56fe7bd2a2668ca5fa11f1b3221e
+    PREFIX ${CPPUTEST_PREFIX_DIR}
+    SOURCE_DIR ${CPPUTEST_SOURCE_DIR}
+    BINARY_DIR ${CPPUTEST_BINARY_DIR}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config $<CONFIG>
+    BUILD_BYPRODUCTS ${CPPUTEST_LIBRARIES}
+    UPDATE_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --config $<CONFIG> --prefix ${CPPUTEST_INSTALL_DIR}
+)
+
 set(OTHER_SOURCE_DIR ${THIRD_PARTY_DIR}/include)
 
 set(PRIVATE_INCLUDE_DIR
@@ -235,6 +268,7 @@ set(PRIVATE_LINK_LIBS
     ${JPEG_LIBRARIES}
     ${LIBDE265_LIBRARIES}
 )
+
 
 set(HEIF2JPG_APP heif2jpg)
 add_executable(${HEIF2JPG_APP}
@@ -260,3 +294,29 @@ if (MSVC)
 	install(FILES ${HEIF_BIN_PREFIX}/heif.dll TYPE BIN)
 	install(FILES ${LIBDE265_BIN_PREFIX}/libde265.dll TYPE BIN)
 endif()
+
+# For building and running tests
+set(TEST_PRIVATE_INCLUDE_DIR
+    ${PRIVATE_INCLUDE_DIR}
+    ${CPPUTEST_INCLUDE_DIRS}
+)
+set(TEST_PRIVATE_LINK_LIBS
+    ${PRIVATE_LINK_LIBS}
+    ${CPPUTEST_LIBRARIES}
+)
+set(HEIF2JPG_TEST heif2jpg_test)
+add_executable(${HEIF2JPG_TEST}
+    "tests/test_main.cc"
+    "tests/some_tests.cc"
+)
+add_dependencies(${HEIF2JPG_APP} ${CPPUTEST_TARGET_NAME})
+target_include_directories(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_INCLUDE_DIR})
+target_link_libraries(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_LINK_LIBS})
+target_link_libraries(${HEIF2JPG_TEST} PRIVATE Threads::Threads)
+if (MSVC)
+    target_link_libraries(${HEIF2JPG_TEST} PRIVATE winmm.lib)
+endif()
+add_test(
+    NAME "CppUTest Executable"
+    COMMAND $<TARGET_FILE:${HEIF2JPG_TEST}>
+)
