@@ -228,7 +228,12 @@ set(CPPUTEST_SOURCE_DIR ${THIRD_PARTY_DIR}/${CPPUTEST_TARGET_NAME})
 set(CPPUTEST_BINARY_DIR ${CPPUTEST_PREFIX_DIR}/src/${CPPUTEST_TARGET_NAME}-build)
 set(CPPUTEST_INSTALL_DIR ${CPPUTEST_PREFIX_DIR}/src/${CPPUTEST_TARGET_NAME}-install)
 
-set(CPPUTEST_INCLUDE_DIRS ${CPPUTEST_INSTALL_DIR}/include)
+set(CPPUTEST_INCLUDE_DIRS
+    ${CPPUTEST_INSTALL_DIR}/include
+    # Memory Leak macros
+    ${CPPUTEST_INSTALL_DIR}/include/CppUTest/MemoryLeakDetectorNewMacros.h
+    ${CPPUTEST_INSTALL_DIR}/include/CppUTest/MemoryLeakDetectorMallocMacros.h
+)
 
 set(CPPUTEST_LIB_STATIC ${CMAKE_STATIC_LIBRARY_PREFIX}CppUTest${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(CPPUTESTEXT_LIB_STATIC ${CMAKE_STATIC_LIBRARY_PREFIX}CppUTestExt${CMAKE_STATIC_LIBRARY_SUFFIX})
@@ -273,6 +278,7 @@ set(PRIVATE_LINK_LIBS
 set(HEIF2JPG_APP heif2jpg)
 add_executable(${HEIF2JPG_APP}
     "app/main.cc"
+    "app/heif2jpg_savefile.cc"
 )
 add_dependencies(${HEIF2JPG_APP} ${LIBUHDR_TARGET_NAME} ${LIBHEIF_TARGET_NAME})
 target_include_directories(${HEIF2JPG_APP} PRIVATE ${PRIVATE_INCLUDE_DIR})
@@ -315,8 +321,25 @@ target_link_libraries(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_LINK_LIBS})
 target_link_libraries(${HEIF2JPG_TEST} PRIVATE Threads::Threads)
 if (MSVC)
     target_link_libraries(${HEIF2JPG_TEST} PRIVATE winmm.lib)
+    target_link_options(${HEIF2JPG_TEST} PRIVATE /NODEFAULTLIB:LIBCMT)
+    target_link_options(${HEIF2JPG_TEST} PRIVATE /NODEFAULTLIB:LIBCMTD)
 endif()
 add_test(
     NAME "CppUTest Executable"
     COMMAND $<TARGET_FILE:${HEIF2JPG_TEST}>
 )
+install(TARGETS ${HEIF2JPG_TEST})
+
+# Debugging
+get_property(target_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+message(STATUS "List of Targets: ${target_names}")
+message(STATUS "Current binary directory: ${CMAKE_CURRENT_BINARY_DIR}")
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+endif()
+
+message(STATUS "Current runtime output directory: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+message(STATUS "Current library output directory: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
