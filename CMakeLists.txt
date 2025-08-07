@@ -312,7 +312,7 @@ set(TEST_PRIVATE_LINK_LIBS
 set(HEIF2JPG_TEST heif2jpg_test)
 add_executable(${HEIF2JPG_TEST}
     "tests/test_main.cc"
-    "tests/some_tests.cc"
+    "tests/heif2jpg_tests.cc"
 )
 add_dependencies(${HEIF2JPG_APP} ${CPPUTEST_TARGET_NAME})
 target_include_directories(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_INCLUDE_DIR})
