@@ -1,5 +1,9 @@
 #include "encode_uhdr.h"
 
+#include <cmath>
+/* For strerror() on non-Windows */
+#include <string.h>
+
 class ResReleaser
 {
 public:
