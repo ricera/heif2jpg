@@ -20,7 +20,7 @@
 #include <ultrahdr_api.h>
 
 #include "heif2jpg.h"
-#include "heif2jpg_savefile.h"
+#include "encode_uhdr.h"
 
 /* Progress functions obtained from libheif's examples/heif_dec.cc */
 static int max_value_progress = 0;
@@ -358,7 +358,7 @@ int main(int argc, char **argv)
             return 9;
         }
 
-        ret = save_uhdr_jpg_file(handle, img, encode_options, output_filename);
+        ret = save_uhdr_jpg_file(img, encode_options, output_filename);
         if (ret)
             return ret;
     }

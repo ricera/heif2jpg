@@ -18,7 +18,6 @@ struct heif2jpg_encode_options {
     uint8_t quality;
 };
 
-int save_uhdr_jpg_file(struct heif_image_handle *handle,
-    struct heif_image *image,
+int save_uhdr_jpg_file(struct heif_image *image,
     struct heif2jpg_encode_options encode_options,
     std::string output_filename);

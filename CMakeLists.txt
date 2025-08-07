@@ -274,11 +274,10 @@ set(PRIVATE_LINK_LIBS
     ${LIBDE265_LIBRARIES}
 )
 
-
 set(HEIF2JPG_APP heif2jpg)
 add_executable(${HEIF2JPG_APP}
     "app/main.cc"
-    "app/heif2jpg_savefile.cc"
+    "app/encode_uhdr.cc"
 )
 add_dependencies(${HEIF2JPG_APP} ${LIBUHDR_TARGET_NAME} ${LIBHEIF_TARGET_NAME})
 target_include_directories(${HEIF2JPG_APP} PRIVATE ${PRIVATE_INCLUDE_DIR})
