@@ -22,12 +22,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # For clang
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Speed?
-set(CMAKE_BUILD_PARALLEL_LEVEL 8)
-
-# For debugging
-# set(CMAKE_VERBOSE_MAKEFILE ON)
-
 # Put install directory in an easy-to-use place
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install)
 message(STATUS "new CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
@@ -41,10 +35,7 @@ set(LIBDE265_SOURCE_DIR ${THIRD_PARTY_DIR}/${LIBDE265_TARGET_NAME})
 set(LIBDE265_BINARY_DIR ${LIBDE265_PREFIX_DIR}/src/${LIBDE265_TARGET_NAME}-build)
 set(LIBDE265_INCLUDE_DIRS ${LIBDE265_SOURCE_DIR} ${LIBDE265_BINARY_DIR})
 
-# Use this if building libde265 as a static library
-# set(LIBDE265_LIB ${CMAKE_STATIC_LIBRARY_PREFIX}libde265${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(LIBDE265_LIB ${CMAKE_STATIC_LIBRARY_PREFIX}de265${CMAKE_STATIC_LIBRARY_SUFFIX})
-# Install the library in a local path and refer to it later for libheif
 set(LIBDE265_INSTALL_DIR ${LIBDE265_PREFIX_DIR}/src/${LIBDE265_TARGET_NAME}-install)
 set(LIBDE265_LIB_PREFIX ${LIBDE265_INSTALL_DIR}/lib/)
 set(LIBDE265_BIN_PREFIX ${LIBDE265_INSTALL_DIR}/bin/)
@@ -138,8 +129,8 @@ message(STATUS "Looking for libheif libs: ${LIBHEIF_LIBRARIES}")
 message(STATUS "libheif install dir: ${LIBHEIF_INSTALL_DIR}")
 
 # Build libheif with BUILD_SHARED_LIBS=ON for Windows
-# Don't include JPEG library for non-Windows builds until I can figure out how
-# to fix them.
+# XXX: Don't include JPEG library for non-Windows builds until I can figure out
+# how to fix them.
 if (MSVC)
 	ExternalProject_Add(${LIBHEIF_TARGET_NAME}
 	    DEPENDS ${LIBDE265_TARGET_NAME} ${JPEGTURBO_TARGET_NAME}
@@ -150,7 +141,7 @@ if (MSVC)
 	    BINARY_DIR ${LIBHEIF_BINARY_DIR}
 	    CMAKE_ARGS --preset=release-noplugins -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON
 	    CMAKE_CACHE_ARGS
-		"-DLIBDE265_LIBRARY:FILEPATH=${LIBDE265_INSTALL_DIR}/lib/${LIBDE265_LIB}"
+		"-DLIBDE265_LIBRARY:FILEPATH=${LIBDE265_LIBRARIES}"
 		"-DLIBDE265_INCLUDE_DIR:FILEPATH=${LIBDE265_INSTALL_DIR}/include"
 		"-DWITH_JPEG_ENCODER:BOOL=ON"
 		"-DWITH_JPEG_DECODER:BOOL=ON"
@@ -171,7 +162,7 @@ else()
 	    BINARY_DIR ${LIBHEIF_BINARY_DIR}
 	    CMAKE_ARGS --preset=release-noplugins -DWITH_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF
 	    CMAKE_CACHE_ARGS
-		"-DLIBDE265_LIBRARY:FILEPATH=${LIBDE265_INSTALL_DIR}/lib/${LIBDE265_LIB}"
+		"-DLIBDE265_LIBRARY:FILEPATH=${LIBDE265_LIBRARIES}"
 		"-DLIBDE265_INCLUDE_DIR:FILEPATH=${LIBDE265_INSTALL_DIR}/include"
 	    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config $<CONFIG>
 	    BUILD_BYPRODUCTS ${LIBHEIF_LIBRARIES}
@@ -221,7 +212,7 @@ ExternalProject_Add_Step(${LIBUHDR_TARGET_NAME} copy_findjpeg
     DEPENDERS configure
 )
 
-# Add CPPUTest info
+# Add CPPUTest library
 set(CPPUTEST_TARGET_NAME cpputest)
 set(CPPUTEST_PREFIX_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CPPUTEST_TARGET_NAME})
 set(CPPUTEST_SOURCE_DIR ${THIRD_PARTY_DIR}/${CPPUTEST_TARGET_NAME})
@@ -314,7 +305,7 @@ add_executable(${HEIF2JPG_TEST}
     "tests/test_main.cc"
     "tests/heif2jpg_tests.cc"
 )
-add_dependencies(${HEIF2JPG_APP} ${CPPUTEST_TARGET_NAME})
+add_dependencies(${HEIF2JPG_TEST} ${HEIF2JPG_APP} ${CPPUTEST_TARGET_NAME})
 target_include_directories(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_INCLUDE_DIR})
 target_link_libraries(${HEIF2JPG_TEST} PRIVATE ${TEST_PRIVATE_LINK_LIBS})
 target_link_libraries(${HEIF2JPG_TEST} PRIVATE Threads::Threads)
